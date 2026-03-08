@@ -8,3 +8,27 @@ How users can get started with the project
 Where users can get help with your project
 Who maintains and contributes to the project
 -->
+## Getting started
+### File overview
+(something like this, to be udpated)
+gradio-dashboard/
+├── app_demo.py     Main entry point (Mounts the pages)
+├── requirements.txt
+├── .env  SPARQL Endpoint URL/Credentials
+├── src/
+│   ├── __init__.py
+│   ├── sparql_client.py 	Query functions
+│   └── ui_components.py Functions for UI event/output logic
+└── Dockerfile
+
+
+### environment variables
+* SPARQL_ENDPOINT=http://compass.project.urbandatacentre.ca/repositories/CDT_Rules
+* passing through docker vs in .env
+
+### docker
+Building the container, run in gradio-dashboard:
+sudo docker build --progress=plain -t app_demo .
+
+Running the container:
+sudo docker run -d -p 7860:7860 --name demo_container app_demo

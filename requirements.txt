@@ -1,0 +1,12 @@
+# Main UI library
+huggingface_hub>=0.19.0
+gradio>=4.0.0
+
+# SPARQL and Data Handling
+SPARQLWrapper
+pandas
+python-dotenv
+plotly
+arcgis
+geopy
+shapely
