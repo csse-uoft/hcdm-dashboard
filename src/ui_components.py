@@ -1,3 +1,19 @@
+"""UI Components for the Housing Potential Dashboard.
+
+This module provides high-level functions to handle user interactions within 
+the Gradio interface. It includes logic for:
+1. Dynamic map rendering (Plotly/Shapely) with WKT support.
+2. Route handling for different SPARQL query categories (via dropdown interaction).
+3. Color palette management and exclusion (accessibility/contrast).
+4. Embedding GraphDB visual graph visualizations via iframes.
+
+Note:
+    Requires a running SPARQL endpoint and pre-configured GraphDB 
+    visualizations for certain iframe features.
+
+Todo:
+    * Replace the GraphDB graph view with a custom graph to improve the visualization
+"""
 import gradio as gr
 import urllib.parse
 import json
@@ -8,9 +24,22 @@ from PIL import ImageColor
 from src.sparql_client import *
 from src.utils import *
 def add_wkt_to_fig(fig, wkt_str, name, color='blue', opacity=0.3, show_in_legend=True, group_id=None, secondary_label=None, secondary_value=None):
-    """
-    Parses WKT (Point, Multipoint, Polygon, MultiPolygon) and adds the correct trace to the Plotly figure.
-    Note: currently only supports point, multipoint, polygon and multipolygon (all other geometries will note be added)
+    """Parses WKT and adds a corresponding trace to a Plotly figure.
+
+    Supports Point, MultiPoint, Polygon, and MultiPolygon. Other geometry types 
+    are ignored. Uses Scattermap for geographic rendering.
+
+    Args:
+        fig (go.Figure): The Plotly figure object to modify.
+        wkt_str (str): The Well-Known Text string representing the geometry.
+        name (str): Label for the legend and hover tooltip.
+        color (str): Hex or CSS color string for the trace.
+        opacity (float): Fill opacity for polygons (0.0 to 1.0).
+        show_in_legend (bool): Whether to display this specific trace in the legend.
+        group_id (str, optional): Legend group ID to allow batch toggling. 
+            Defaults to the `name`.
+        secondary_label (str, optional): Label for additional hover data.
+        secondary_value (any, optional): Value for additional hover data.
     """
     try:
         clean_wkt = wkt_str.split('>')[-1].strip()
@@ -73,16 +102,45 @@ def add_wkt_to_fig(fig, wkt_str, name, color='blue', opacity=0.3, show_in_legend
     except Exception as e:
         print(f"Error parsing WKT for {name}: {e}")
 
-#for exclusion calculations
+#for color palette exclusion calculations
 def hex_to_rgb_array(h):
+    """Converts a hex color string to a NumPy RGB array.
+
+    Args:
+        h (str): Hex color code (e.g., '#FF5733').
+
+    Returns:
+        np.ndarray: Array of [R, G, B] values.
+    """
     return np.array(ImageColor.getcolor(h, "RGB"))
 
 def hex_to_rgba(hex_code, opacity):
+    """Converts hex to a CSS-style rgba string.
+
+    Args:
+        hex_code (str): Hex color code.
+        opacity (float): Alpha value (0.0 to 1.0).
+
+    Returns:
+        str: String in format 'rgba(R, G, B, A)'.
+    """
     hex_code = hex_code.lstrip('#')
     rgb = tuple(int(hex_code[i:i+2], 16) for i in (0, 2, 4))
     return f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, {opacity})'
 
 def is_near_any_banned(color_hex, banned_list, threshold=60):
+    """Checks if a color is visually too close to any color in a banned list.
+
+    Uses Euclidean distance in the RGB color space.
+
+    Args:
+        color_hex (str): The candidate color hex.
+        banned_list (list[str]): List of hex colors to avoid.
+        threshold (float): Distance limit for exclusion.
+
+    Returns:
+        bool: True if the color is within the threshold of a banned color.
+    """
     c1 = hex_to_rgb_array(color_hex)
     for banned_hex in banned_list:
         c2 = hex_to_rgb_array(banned_hex)
@@ -92,6 +150,20 @@ def is_near_any_banned(color_hex, banned_list, threshold=60):
     return False
 
 def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,progress=gr.Progress()):
+    """Primary router for executing SPARQL queries based on UI selection.
+    Returns the results in a table, column listing, map, and/or visual graph (html embedding) as appropriate.
+
+    Args:
+        selected_option (str): The query category selected in the UI.
+        endpoint (str): SPARQL endpoint URL.
+        prefixes (str): SPARQL prefix declarations.
+        parcel_uri (str): The IRI of the parcel being investigated.
+        current_fig (go.Figure): The existing Plotly map figure.
+        progress (gr.Progress): Gradio progress tracker.
+
+    Returns:
+        tuple: (results_table, updated_fig, col1_md, col2_md, secondary_drp, graph_html)
+    """
     """ Generates the appropriate query and output based on selected_option. """
     #text columns
     col1=""
@@ -298,7 +370,22 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
     return results_table, current_fig, col1, col2, secondary_drp,graph_output
 
 def secondary_router(first_selected_option, selected_option,endpoint, prefixes, parcel_uri,current_fig,progress=gr.Progress()):
-    """Generates output based on a combination of the first_selected_option (identifies query type) and selected_option (specifies query parameters)"""
+    """Handles multi-step queries (e.g., specific property compliance).
+
+    Used when a secondary user input (like a dropdown) is required after the 
+    initial category selection.
+
+    Args:
+        first_selected_option (str): The primary category (e.g., 'Zoning Compliance').
+        selected_option (str): The specific parameter (e.g., a specific property IRI).
+        endpoint (str): SPARQL endpoint URL.
+        prefixes (str): SPARQL prefix declarations.
+        parcel_uri (str): The IRI of the parcel.
+        current_fig (go.Figure): The existing Plotly map figure.
+
+    Returns:
+        tuple: (results_table, updated_fig)
+    """
     results_table=gr.DataFrame()
     # Manually unpack Gradio's PlotData object (to create a copy of the map so that we can add to it)
     try:
@@ -377,9 +464,24 @@ def secondary_router(first_selected_option, selected_option,endpoint, prefixes, 
     return results_table, current_fig
 
 def generate_graph_iframe(pid, configid, host="compass.project.urbandatacentre.ca"):
-    """Returns the GraphDB Visual Graph result for sparql_query in an iframe. 
-    Note the SPARQL query needs to be of the form CONSTRUCT ... WHERE ... rather than SELECT ... WHERE ...
-    i.e., it needs to return results in the form of a graph not a table"""
+    """Generates an HTML iframe string for GraphDB's Visual Graph.
+
+    Requires GraphDB to be configured with the specific visualization ID (configid).
+
+    Args:
+        pid (str): The persistent identifier (IRI) to center the graph on.
+        configid (str): The GraphDB visual configuration ID.
+        host (str): Hostname of the GraphDB instance.
+
+    Returns:
+        str: Raw HTML string containing the iframe.
+
+    Todo:
+        * Accommodate option to generate a visualization directly from a SPARQL query
+            https://graphdb.ontotext.com/documentation/11.2/visualize-and-explore.html#embed-visual-graphs
+        * Investigate fixes for GraphDB bug: workspace view in embedding
+    """
+
     # Build the GraphDB Visual Graph URL with the &embedded parameter
     # Ensure your GraphDB is in 'Free Access' mode for the best experience.
     base_url = f"https://{host}/graphs-visualizations"

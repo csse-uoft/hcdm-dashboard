@@ -27,8 +27,8 @@ gradio-dashboard/
 * passing through docker vs in .env
 
 ### docker
-Building the container, run in gradio-dashboard:
-sudo docker build --progress=plain -t app_demo .
+Building the container, run in the folder (hpcdm-dashboard):
+sudo docker build --progress=plain -t dashboard_img .
 
 Running the container:
-sudo docker run -d -p 7860:7860 --name demo_container app_demo
+sudo docker run -d -p 7860:7860 --name demo_container dashboard_img

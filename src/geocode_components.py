@@ -1,3 +1,22 @@
+"""Geocoding and Spatial Discovery for Parcel Retrieval.
+
+This module provides logic to convert human-readable addresses into geographic 
+coordinates (geocoding) and perform spatial intersections against an RDF 
+graph database to identify specific land parcels.
+
+It utilizes a tiered geocoding approach (ArcGIS with a Nominatim fallback) 
+and generates Plotly maps to visualize the search results and 
+intersected parcel boundaries.
+
+Dependencies:
+    - ArcGIS for primary geocoding within the Toronto extent.
+    - Nominatim for open-source fallback.
+    - Plotly for map visualization.
+    - GeoSPARQL for spatial graph queries.
+
+To do:
+    * refactor to move the SPARQL logic into sparql_client, map processing into ui_components
+"""
 from geopy.geocoders import Nominatim
 from arcgis.gis import GIS
 from arcgis.geocoding import geocode
@@ -8,7 +27,22 @@ from shapely import wkt
 from SPARQLWrapper import SPARQLWrapper, JSON
 from src.ui_components import *
 def geocode_logic(address):
-    """Tries ArcGIS with restriction first, then falls back to Nominatim."""
+    """Translates a string address into geographic coordinates.
+
+    Attempts to locate the address using the ArcGIS World Geocoding Service, 
+    restricted to the Toronto extent. If no results are found or an error 
+    occurs, it falls back to the Nominatim (OpenStreetMap) geocoder.
+
+    Args:
+        address (str): The physical address to geocode (e.g., "100 Queen St W").
+
+    Returns:
+        tuple[float | None, float | None, str | None]: A tuple containing 
+            (latitude, longitude, formatted_address). Returns (None, None, None) 
+            if the address cannot be resolved in either service.
+    Notes:
+        ArcGIS geocoding service is free within a limited volume
+    """
     # 1. Initialize ArcGIS (No key required for basic public geosearch)
     public_gis = GIS() 
 
@@ -42,6 +76,24 @@ def geocode_logic(address):
     return None, None, None
 
 def process_address(endpoint,address):
+    """Processes a user address to find the corresponding parcel and generate a map.
+
+    This function coordinates the full workflow: geocoding the address, 
+    constructing a GeoSPARQL 'sfIntersects' query, executing it against the 
+    GraphDB endpoint, and rendering the result on an interactive map.
+
+    Args:
+        endpoint (str): The SPARQL endpoint URL.
+        address (str): The raw address input from the user.
+
+    Returns:
+        tuple: A 5-element tuple containing:
+            - parcel_uri (str): The IRI of the found parcel or error message.
+            - full_address (str): A human-readable formatted address (or error message).
+            - query_text (str): The SPARQL query string used for the lookup.
+            - map_fig (go.Figure): The interactive Plotly map figure.
+            - map_fig_alt (go.Figure): A duplicate of the map figure for UI sync (to maintain a base map state).
+    """
     """Returns a parcel ID, referenced address, SPARQL lookup query, and map given user address input"""
     if not address:
         return None, "Please enter an address.", "", go.Figure()
