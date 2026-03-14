@@ -11,10 +11,10 @@ Who maintains and contributes to the project
 ## Getting started
 The code may be run directly but the easiest way to get started is with docker.
 ### docker
-Environment variables (currently only the SPARQL_ENDPOINT) may be defined in a separate .env or passed through the docker build
+Note: Environment variables (currently only the SPARQL_ENDPOINT) may be defined in a separate .env or passed through the docker build
 * SPARQL_ENDPOINT=http://compass.project.urbandatacentre.ca/repositories/CDT_Rules
 
-Building the container, run in the folder (hpcdm-dashboard):
+Clone the respository, then build the container by running the following in the folder (hpcdm-dashboard):
 sudo docker build --progress=plain -t dashboard_img .
 
 Running the container:

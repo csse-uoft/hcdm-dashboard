@@ -232,7 +232,9 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
         data = data.drop(columns=['neighbourhood_name','unit','cwkt'])
         data.columns = headers
         results_table = gr.update(value=data, visible=True)
-        html_cityavg = gr.update(value=html_output, visible=False)
+        #contextual data
+        html_output = format_context_cards(fetch_demographics_avg(endpoint,prefixes))
+        html_cityavg = gr.HTML(value=html_output, label="Toronto Averages", visible=True)
         col1=gr.update(visible=False)
         col2=gr.update(visible=False)
         #update the map
@@ -325,8 +327,8 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
         displaydata = data.style.format(precision=2)
         results_table = gr.update(value=displaydata, visible=True, label="Note: zones adjacent to the parcel (if any) are returned for context.")
         #contextual data
-        #html_output = format_context_cards(fetch_zoning_avg(endpoint,prefixes))
-        #html_cityavg = gr.update(value=html_output, visible=True)
+        html_output = format_context_cards(fetch_zoning_avg(endpoint,prefixes))
+        html_cityavg = gr.update(value=html_output, label="Toronto Averages", visible=True)
         col1=gr.update(visible=False)
         col2=gr.update(visible=False)
         #update map

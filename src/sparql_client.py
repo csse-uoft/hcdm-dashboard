@@ -96,7 +96,7 @@ def fetch_neighbourhood_demographics(endpoint,prefixes,pid,census_characteristic
         pd.DataFrame: A DataFrame containing neighborhood name, population, 
             units, and census tract labels, as definfed by table_vars.
     """
-    table_vars = ["xlabel", "neighbourhood_name", "population", "unit_label", "unit", "ct","cwkt"]
+    query_vars = ["xlabel", "neighbourhood_name", "population", "unit_label", "unit", "ct","cwkt"]
 
     # Stage 1: Neighbourhood Discovery
     stage_1 = f"""
@@ -142,7 +142,12 @@ SELECT ?xlabel ?neighbourhood_name ?population ?unit_label ?unit ?ct ?cwkt WHERE
     }}
 }}"""
  
-    return run_sparql_to_data(query,endpoint,table_vars)
+    #run sparql query; convert to table
+    df = run_sparql_to_data(query, endpoint,query_vars)
+    #if there are no query results, return "Unknown"
+    if df.empty:
+        df.loc[0] = "unknown" 
+    return df
 
 def fetch_service_classes(endpoint, prefixes):
     """Retrieves leaf-level Service classes defined in the graph.
@@ -578,7 +583,50 @@ def fetch_zoning_avg(endpoint,prefixes):
         df.loc[0] = "unknown" 
     return df
 
-#transformation of query results for display
+def fetch_demographics_avg(endpoint,prefixes):
+    """Retrieves the averagee values for the key census characteristics
+    Todo: complete documentation, generalize for arbitrary list of characteristics"""
+    query_vars = ['avg_label', 'avg', 'u_label']
+    query= f"""
+    {prefixes}
+    SELECT ?avg_label (AVG(?val) AS ?avg) ?u_label
+    WHERE {{
+    {{
+        # Population density
+        ?x a cacensus:PopulationDensity2016 ;
+        i72:hasValue [ i72:hasNumericalValue ?val ;
+                        i72:hasUnit ?unit ] .
+        cacensus:PopulationDensity2016 rdfs:label ?avg_label .
+        OPTIONAL {{?unit rdfs:label ?u_label .}}
+    }}
+    UNION
+    {{
+        # Avg Income
+        ?x a <http://ontology.eil.utoronto.ca/tove/cacensus#AverageAfterTaxIncome25Sample2016> ;
+        i72:hasValue [ i72:hasNumericalValue ?val ;
+                        i72:hasUnit ?unit ] .
+        <http://ontology.eil.utoronto.ca/tove/cacensus#AverageAfterTaxIncome25Sample2016> rdfs:label ?avg_label .
+        OPTIONAL {{ ?unit rdfs:label ?u_label . }}
+    }}
+    UNION
+    {{
+        # Total Private Dwellings
+        ?x a <http://ontology.eil.utoronto.ca/tove/cacensus#TotalPrivateDwellings2016> ;
+        i72:hasValue [ i72:hasNumericalValue ?val ;
+                        i72:hasUnit ?unit ] .
+        <http://ontology.eil.utoronto.ca/tove/cacensus#TotalPrivateDwellings2016> rdfs:label ?avg_label.
+        OPTIONAL {{ ?unit rdfs:label ?u_label . }}
+    }}
+    }}
+    GROUP BY ?avg_label ?u_label
+    """
+    #run sparql query; convert to table
+    df = run_sparql_to_data(query, endpoint,query_vars)
+    #if there are no query results, return "Unknown"
+    if df.empty:
+        df.loc[0] = "unknown" 
+    return df
+
 def run_sparql_to_data(query, endpoint, columns):
     """Executes a SPARQL query and converts the JSON results to a pandas DataFrame.
 

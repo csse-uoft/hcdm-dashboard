@@ -38,6 +38,9 @@ from src.geocode_components import *
 from src.sparql_client import *
 from src.ui_components import *
 
+# Set this to disable analytics, which can cause loading hangs for html
+os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
+
 load_dotenv()  # Load the variables from .env into system environment
 SPARQL_ENDPOINT = os.getenv("SPARQL_ENDPOINT")
 #define prefixes to be used in the queries
