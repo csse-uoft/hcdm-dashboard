@@ -186,3 +186,46 @@ def process_df_col_to_markdown(df,colname):
     markdown_output = f"""## {colname}
         \n{list}"""
     return markdown_output
+
+def process_df_col_to_markdown_chips(df, column_name):
+    """Converts a DataFrame column into a stylized Markdown string of HTML 'chips'.
+
+    This helper is designed for the 'Land Use' section of the UI. It takes unique 
+    values from the query results and wraps them in CSS-styled spans to create 
+    a 'tag' or 'chip' look, making categories easily distinguishable.
+
+    Args:
+        df (pd.DataFrame): The source DataFrame from fetch_allowed_use or fetch_current_use.
+        column_name (str): The name of the column to extract (e.g., 'Allowed Use').
+
+    Returns:
+        str: A Markdown string containing HTML-styled tags.
+    """
+    # 1. Handle Empty or 'Unknown' states gracefully
+    if df.empty or (len(df) == 1 and str(df.iloc[0, 0]).lower() == "unknown"):
+        return f"### {column_name}\n*No data available for this parcel.*"
+
+    # 2. Extract unique, non-null values
+    values = df[column_name].dropna().unique()
+    
+    # 3. Determine color scheme based on the category
+    # Blue theme for 'Allowed' (Permissive), Grey theme for 'Current' (Fact)
+    if "Allowed" in column_name:
+        bg, text, border = "#e3f2fd", "#1565c0", "#90caf9"
+    else:
+        bg, text, border = "#f5f5f5", "#424242", "#e0e0e0"
+
+    # 4. Generate the HTML Chips
+    chips = []
+    for val in values:
+        chip_html = (
+            f'<span style="background-color: {bg}; color: {text}; '
+            f'padding: 4px 12px; margin: 4px 2px; border-radius: 16px; '
+            f'border: 1px solid {border}; font-size: 0.85em; font-weight: 500; '
+            f'display: inline-block; font-family: sans-serif;">'
+            f'{val}</span>'
+        )
+        chips.append(chip_html)
+
+    # 5. Return as a clean Markdown block
+    return f"### {column_name}\n{' '.join(chips)}"

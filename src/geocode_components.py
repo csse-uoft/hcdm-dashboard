@@ -125,7 +125,7 @@ SELECT ?p ?wkt WHERE {{
     sparql = SPARQLWrapper(endpoint)
     sparql.setQuery(query_text)
     sparql.setReturnFormat(JSON)
-    timeout_limit = 35 
+    timeout_limit = 60 
     sparql.setTimeout(timeout_limit)
 
     parcel_uri = "No parcels found."

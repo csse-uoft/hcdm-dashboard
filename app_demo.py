@@ -127,7 +127,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue="red")) as demo:
         """
         <div class="info-bar">
             <strong>Beta Version:</strong> This tool queries a live, shared SPARQL endpoint, currently limited to sequential request processing.
-            prevent system-wide delays, queries are processed one at a time and will automatically timeout after 30 seconds.
+            prevent system-wide delays, queries are processed one at a time and will automatically timeout after 60 seconds.
         """
     )
     
@@ -165,9 +165,9 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue="red")) as demo:
         results_table = gr.Dataframe(interactive=False, visible=False,  buttons=["copy", "fullscreen"])
         # --- Results Listing (columns) ---
         with gr.Row():
-            # Column 1: Markdown list
+            # Column 1: Markdown output
             col1_output = gr.Markdown(visible=False)
-            # Column 2: Single value
+            # Column 2: Markdown output
             col2_output = gr.Markdown(visible=False)
         # --- GraphDB visual graph ---
     with gr.Column(scale=1):    #averages for context

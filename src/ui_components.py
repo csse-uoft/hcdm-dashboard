@@ -371,11 +371,11 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
         data1 = fetch_allowed_use(endpoint,prefixes,parcel_uri)
         header1="Allowed Use"
         data1.columns = [header1]
-        col1value = process_df_col_to_markdown(data1,header1)
+        col1value = process_df_col_to_markdown_chips(data1,header1)
         data2 = fetch_current_use(endpoint,prefixes,parcel_uri)
         header2="Current Use"
         data2.columns=[header2]
-        col2value = process_df_col_to_markdown(data2,header2)
+        col2value = process_df_col_to_markdown_chips(data2,header2)
         col1 = gr.HTML(value = col1value, visible=True)
         col2 = gr.HTML(value = col2value, visible=True)
 
