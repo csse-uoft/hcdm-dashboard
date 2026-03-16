@@ -170,17 +170,17 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
     Returns:
         tuple: (results_table, updated_fig, col1_md, col2_md, secondary_drp, graph_html)
     """
-    """ Generates the appropriate query and output based on selected_option. """
+    #initialize gradio components - not best practice but fixes Gradio 6.9 state bug where visibility isn't triggered on the first interaction
     #text columns
-    col1=gr.update(visible=False)
-    col2=gr.update(visible=False)
+    col1=""
+    col2=""
     #results summaries
-    results_table=gr.update(value=None,visible=False)
+    results_table=gr.Dataframe(value=None,visible=False)
+    secondary_drp = gr.Dropdown(choices=[],visible=False)
     html_output=""
-    html_cityavg=gr.update(visible=False)
-    secondary_drp = gr.update(visible=False)
+    html_cityavg=gr.HTML(visible=False)
     #GraphDB visual graph html embedding
-    graph_output = gr.update(value="")
+    #graph_output = gr.HTML(value="")
 
     #colour palettes for maps
     # 1. Define the colors you want to avoid, threshold for closeness
@@ -217,12 +217,9 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
         data.columns=headers
         #Style values with lower precision
         displaydata = data.style.format(precision=2)
-        results_table = gr.update(value=displaydata, visible=True)  
-        html_cityavg = gr.update(value=html_output, visible=False)
-        col1=gr.update(visible=False)
-        col2=gr.update(visible=False)
+        results_table = gr.Dataframe(value=displaydata, visible=True)  
         #visual graph embedding
-        graph_output = gr.update(value=generate_graph_iframe(parcel_uri,"4e4261c482204a5aa7951d08f4b66589"),visible=True) #predefined graphDB visualization config
+        #graph_output = gr.HTML(value=generate_graph_iframe(construct_parcel_attributes(prefixes,parcel_uri)),visible=True) 
     elif selected_option == "Neighbourhood Demographics":
         # Query 2: Returns neighbourhood demographic data
         #list of characteristics to query
@@ -231,12 +228,10 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
         data,map_data = process_neighbourhood_demographics(endpoint,prefixes,parcel_uri,characteristic_list)
         data = data.drop(columns=['neighbourhood_name','unit','cwkt'])
         data.columns = headers
-        results_table = gr.update(value=data, visible=True)
+        results_table = gr.Dataframe(value=data, visible=True)
         #contextual data
         html_output = format_context_cards(fetch_demographics_avg(endpoint,prefixes))
         html_cityavg = gr.HTML(value=html_output, label="Toronto Averages", visible=True)
-        col1=gr.update(visible=False)
-        col2=gr.update(visible=False)
         #update the map
         #  Build the color map using the indices of your unique labels
         # Since 'map_data' is already unique, we can use enumerate directly on it
@@ -261,20 +256,22 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
             margin={"r":0,"t":0,"l":0,"b":0}
         )
         current_fig = new_fig
+        #visual graph embedding
+        #graph_output = gr.HTML(value=generate_graph_iframe(construct_neighbourhood_demographics(prefixes,parcel_uri)),visible=True) 
     elif selected_option == "Available Services":
         #Returns available service and capacities
         headers = ["Service", "Name (if applicable)", "Capacity Type", "Capacity", "Capacity Unit"]
-        data, map_data = process_service_data(endpoint, prefixes, parcel_uri, progress=progress)
+        data, avg_data, map_data = process_service_data(endpoint, prefixes, parcel_uri, progress=progress)
         #remove wkt from results table
         data = data.drop(columns=['swkt'])
         #Set new headers for display
         data.columns=headers
         #Style values with lower precision
         displaydata = data.style.format(precision=2)
-        results_table = gr.update(value=displaydata, visible=True)     
-        html_cityavg = gr.update(value=html_output, visible=False)
-        col1=gr.update(visible=False)
-        col2=gr.update(visible=False)
+        results_table = gr.Dataframe(value=displaydata, visible=True)
+         #contextual data
+        html_output = format_context_cards(avg_data)
+        html_cityavg = gr.HTML(value=html_output, label="Toronto Averages", visible=True)            
         # For service points on the map
         # Count occurrences of each service type
         from collections import Counter
@@ -325,12 +322,11 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
         data.columns=headers
         #Style values with lower precision
         displaydata = data.style.format(precision=2)
-        results_table = gr.update(value=displaydata, visible=True, label="Note: zones adjacent to the parcel (if any) are returned for context.")
+        results_table = gr.Dataframe(value=displaydata, visible=True, label="Note: zones adjacent to the parcel (if any) are returned for context.")
         #contextual data
         html_output = format_context_cards(fetch_zoning_avg(endpoint,prefixes))
-        html_cityavg = gr.update(value=html_output, label="Toronto Averages", visible=True)
-        col1=gr.update(visible=False)
-        col2=gr.update(visible=False)
+        html_cityavg = gr.HTML(value=html_output, label="Toronto Averages", visible=True)
+
         #update map
         # For regulation areas on the map
         # Count occurrences of each zone
@@ -380,21 +376,17 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
         header2="Current Use"
         data2.columns=[header2]
         col2value = process_df_col_to_markdown(data2,header2)
-        col1 = gr.update(value = col1value, visible=True)
-        col2 = gr.update(value = col2value, visible=True)
-        html_cityavg = gr.update(value=html_output, visible=False)
-        results_table=gr.update(visible=False)
+        col1 = gr.HTML(value = col1value, visible=True)
+        col2 = gr.HTML(value = col2value, visible=True)
+
     elif selected_option == "Zoning Compliance":
         #get property labels and uris constrained by zoning
         choices = process_compliance_properties(endpoint,prefixes)
         manual_option = [("Select a property...", "NONE_SELECTED")]
         choices = manual_option + choices
-        secondary_drp = gr.update(choices=choices, visible=True, value="NONE_SELECTED")
-        results_table = gr.update(value=None, visible=False)
-        html_cityavg = gr.update(value=html_output, visible=False)
-        col1=gr.update(visible=False)
-        col2=gr.update(visible=False)        
-    return results_table, html_cityavg, current_fig, col1, col2, secondary_drp, graph_output
+        secondary_drp = gr.Dropdown(choices=choices, value="NONE_SELECTED", visible=True)
+
+    return results_table, html_cityavg, current_fig, col1, col2, secondary_drp
 
 def secondary_router(first_selected_option, selected_option,endpoint, prefixes, parcel_uri,current_fig,progress=gr.Progress()):
     """Handles multi-step queries (e.g., specific property compliance).
@@ -413,7 +405,7 @@ def secondary_router(first_selected_option, selected_option,endpoint, prefixes, 
     Returns:
         tuple: (results_table, updated_fig)
     """
-    results_table=gr.update(value=None,visible=False)
+    results_table=gr.Dataframe(value=None,visible=False)
     # Manually unpack Gradio's PlotData object (to create a copy of the map so that we can add to it)
     try:
         #create a copy to add features to
@@ -435,17 +427,17 @@ def secondary_router(first_selected_option, selected_option,endpoint, prefixes, 
     if selected_option == "NONE_SELECTED":
         headers=[""]
         data = [["Please select a query from the list."]]
-        results_table = gr.update(value=data, headers=headers, visible=True)
+        results_table = gr.Dataframe(value=data, headers=headers, visible=True)
     elif not parcel_uri:
         headers=[""]
         data = [["No parcel found. Please search for an address first."]]
-        results_table = gr.update(value=data, headers=headers, visible=True)
+        results_table = gr.Dataframe(value=data, headers=headers, visible=True)
     elif first_selected_option == "Zoning Compliance":    #the logic for zoning compliance, other multi-part queries will be different
         headers = ["Nearby Parcel", "Regulation", "Constraint Type", "Limit", "Unit", "Actual Value", "Regulation Compliant?"]
         data,map_data = process_zoning_compliance(endpoint,prefixes,parcel_uri,selected_option)
         data = data.drop(columns=['nearbyp','nearbypwkt','actualunit'])
         data.columns = headers
-        results_table = gr.update(value=data, visible=True)
+        results_table = gr.Dataframe(value=data, visible=True)
         #update the map
         # For parcels on the map
         # Count occurrences of each status (compliance) type
@@ -489,7 +481,7 @@ def secondary_router(first_selected_option, selected_option,endpoint, prefixes, 
         current_fig = new_fig
     return results_table, current_fig
 
-def generate_graph_iframe(pid, configid, host="compass.project.urbandatacentre.ca"):
+def generate_graph_iframe(query, host="compass.project.urbandatacentre.ca"):
     """Generates an HTML iframe string for GraphDB's Visual Graph.
 
     Requires GraphDB to be configured with the specific visualization ID (configid).
@@ -512,18 +504,16 @@ def generate_graph_iframe(pid, configid, host="compass.project.urbandatacentre.c
     # Ensure your GraphDB is in 'Free Access' mode for the best experience.
     base_url = f"https://{host}/graphs-visualizations"
     repo = "CDT_HPCDM_Demo"
-    #url encode the pid
      # 1. URL-encode the SPARQL query
-    pid = urllib.parse.quote(pid)
-    embedded_url = f"{base_url}?config={configid}&uri={pid}&embedded&repository={repo}"
-    #debug
-    print(f"Embedded url: {embedded_url}")
+    query = urllib.parse.quote(query)
+    embedded_url = f"{base_url}?query={query}&embedded&repository={repo}"
     # 3. Return the HTML iframe component
     return f'<iframe src="{embedded_url}" width="100%" height="600px" style="border:none;"></iframe>'
 
 def format_context_cards(df):
     """Formats a pandas dataframe (via sparql query results) into html content suitable for presentation in the city averages view.
-    Todo: documentation"""
+    Todo: documentation
+    assumes data with the attributes: avg_label, avg, u_label"""
     if df is None or df.empty:
         return "<p style='color: gray;'>No contextual data available for this area.</p>"
     

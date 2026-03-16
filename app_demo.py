@@ -173,15 +173,16 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue="red")) as demo:
     with gr.Column(scale=1):    #averages for context
         # Use small labels for the most important averages
         city_avg = gr.HTML(visible=False,label="Toronto Averages")
-    # This component will render the interactive graph
-    graph_output = gr.HTML(visible=False,label="Visual Graph")
+    # This component will render the interactive graph -- omitted for now (too slow)
+    #with gr.Accordion("Click for Visual Graph", open=False):
+    #    graph_output = gr.HTML(visible=False,label="Visual Graph")
 #event logic        
     search_btn.click(fn=process_address, inputs=[endpoint_state,addr_input], outputs=[selected_parcel_uri, res_status, query_display, map_plot, base_map_state])
     # Dropdown change triggers the specific query logic
     query_dropdown.change(
         fn=query_router,
         inputs=[query_dropdown, endpoint_state, prefix_state, selected_parcel_uri, base_map_state],
-        outputs=[results_table, city_avg, map_plot, col1_output, col2_output,secondary_drp,graph_output]
+        outputs=[results_table, city_avg, map_plot, col1_output, col2_output,secondary_drp]
     )
     #Secondary dropdown triggers additional logic
     secondary_drp.change(
@@ -190,6 +191,6 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue="red")) as demo:
         outputs = [results_table,map_plot]
     )
     if __name__ == "__main__":
-        demo.queue()
+        demo.queue()    #for slow processes (try remove)
         #demo.launch(server_name="0.0.0.0", server_port=7860, share=True)
         demo.launch(css=custom_css)

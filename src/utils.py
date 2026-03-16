@@ -37,6 +37,7 @@ def process_service_data(endpoint,prefixes,pid,progress=gr.Progress()):
     progress(0, desc="Identifying Service Types...")
     class_names = fetch_service_classes(endpoint,prefixes)
     all_dfs = [] # List to hold individual service DataFrames
+    all_avg_dfs = [] #service averages
     map_features = [] 
 
     for i, row in class_names.iterrows():
@@ -45,6 +46,7 @@ def process_service_data(endpoint,prefixes,pid,progress=gr.Progress()):
             # Run a second query using both the parcel URI and the specific class name
             progress((i + 1) / len(class_names), desc=f"Querying Service: {servicetype}")
             service_df = fetch_service_data(endpoint,prefixes,pid,servicetype)
+            service_avg_df = fetch_service_avg(endpoint,prefixes,pid,servicetype)
             new_features = []
             if not service_df.empty:
                 # Extract map features before we modify the DF
@@ -59,6 +61,7 @@ def process_service_data(endpoint,prefixes,pid,progress=gr.Progress()):
                 ]
 
                 all_dfs.append(service_df)
+                all_avg_dfs.append(service_avg_df)
                 # Append the new batch to your master list
                 map_features.extend(new_features)
         except Exception as e:
@@ -66,15 +69,17 @@ def process_service_data(endpoint,prefixes,pid,progress=gr.Progress()):
             continue
     #initialize dataframe
     final_df = pd.DataFrame()
+    final_avg_df = pd.DataFrame()
     # Final Aggregation
     if all_dfs:
         # Combine all service DataFrames into one
         final_df = pd.concat(all_dfs, ignore_index=True)
+        final_avg_df = pd.concat(all_avg_dfs,ignore_index=True)
         # Convert numeric column
         final_df['cap_avail'] = pd.to_numeric(final_df['cap_avail'], errors='coerce')
-        return final_df, map_features
+        return final_df, final_avg_df, map_features
     else:
-        return pd.DataFrame(), []
+        return pd.DataFrame(),pd.DataFrame(), []
     
 def process_neighbourhood_demographics(endpoint,prefixes,pid,census_characteristics):
     """Processes demographic query results and extracts (unique) census tracts in the neighbourhood for display.

@@ -192,9 +192,9 @@ def fetch_service_data(endpoint,prefixes, pid, servicetype):
             and spatial WKT data. Note: spatial WKT data is currently only mapped for services with site locations.
     """
     #clean pid, servicetype
-    pid = str(pid).strip("<>")
-    servicetype = str(servicetype).strip("<>")
-    sparql = SPARQLWrapper(endpoint)  
+  #  pid = str(pid).strip("<>")
+ #   servicetype = str(servicetype).strip("<>")
+#    sparql = SPARQLWrapper(endpoint)  
     query_vars = ["servicelabel", "servicename", "cap_type","cap_avail", "cap_unit", "swkt"]
     detail_query = f"""
             {prefixes}
@@ -212,7 +212,7 @@ SELECT ?servicelabel ?servicename ?cap_type ?cap_avail ?cap_unit ?swkt WHERE {{
         ?s hp:providedFromSite ?site.		
     ?site genprop:hasName ?servicename.}}
     #TBD instead of showing site location (may not exist) return catchment area as swkt?
-
+    #?s service:hasCatchmentArea [geo:asWKT ?swkt].
     #service capacity
     ?s res:hasAvailableCapacity ?cap.
     ?cap i72:hasValue [i72:hasNumericalValue ?cap_avail;
@@ -626,6 +626,42 @@ def fetch_demographics_avg(endpoint,prefixes):
         df.loc[0] = "unknown" 
     return df
 
+def fetch_service_avg(endpoint,prefixes,pid,servicetype):
+    """Todo: doc"""
+    query_vars = ['avg_label', 'avg', 'u_label']
+    query = f"""
+    {prefixes}
+    SELECT ?avg_label ?u_label (AVG(xsd:decimal(?cap)) AS ?avg)
+WHERE {{
+    # 1. Identify Leaf Service Types
+    ?s a <{servicetype}> .
+    <{servicetype}> rdfs:label ?avg_label .
+
+    # 2. Capacity Data
+    ?s res:hasAvailableCapacity ?avail_cap .
+    ?avail_cap rdf:type ?avail_cap_type ;
+               i72:hasValue ?valNode .
+    ?valNode i72:hasNumericalValue ?cap .
+    
+    OPTIONAL {{ 
+        ?valNode i72:hasUnit ?cap_unit .
+        ?cap_unit rdfs:label ?u .
+    }}
+
+    # 3. Capacity Leaf Logic
+    FILTER(!isBlank(?avail_cap_type) && ?avail_cap_type != owl:Thing)
+    
+    FILTER NOT EXISTS {{
+        ?avail_cap rdf:type ?moreSpecific .
+        ?moreSpecific rdfs:subClassOf ?avail_cap_type .
+        FILTER(?moreSpecific != ?avail_cap_type && ?moreSpecific != owl:Nothing)
+    }}
+    ?avail_cap_type rdfs:label ?cap_type_label.
+    BIND(CONCAT(?cap_type_label," (",?u,")") AS ?u_label)
+}}
+GROUP BY ?avg_label ?u_label"""
+    return run_sparql_to_data(query,endpoint,query_vars)
+
 def run_sparql_to_data(query, endpoint, columns):
     """Executes a SPARQL query and converts the JSON results to a pandas DataFrame.
 
@@ -685,3 +721,104 @@ def run_sparql_to_data(query, endpoint, columns):
         print(f"Query Error: {e}")
         return pd.DataFrame(columns=columns)
     
+def construct_parcel_attributes(prefixes,pid):
+    """Constructs a graph overview of the parcel attributes pattern for a given pid
+    Returns string, doesn't run query (output to be used for visual graph embedding)
+    Todo: complete doc"""
+    query = f"""
+    {prefixes}
+    CONSTRUCT {{
+    <{pid}> a hp:Parcel;
+    	?att ?measure.
+    ?measure i72:hasValue ?valnode.
+    ?valnode i72:hasNumericalValue ?a;
+            i72:hasUnit ?u;
+		    rdfs:label ?labelValue .
+
+}} WHERE {{
+    <{pid}> a hp:Parcel;
+    	?att ?measure.
+    ?measure i72:hasValue ?valnode.
+    ?valnode i72:hasNumericalValue ?a;
+            i72:hasUnit ?u.   
+    ?att rdfs:label ?attlabel.
+    BIND(STR(?a) as ?labelValue)
+
+}}"""
+    return query
+
+
+def construct_neighbourhood_demographics(prefixes,pid):
+    """Returns a query string to construct graph summary of the neighbourhood demographics query output
+    Todo: 
+        generalize for arbitrary census characteristic list
+        complete doc"""
+    query = f"""
+    {prefixes}
+    CONSTRUCT {{
+    <{pid}> loc:hasLocation ?ploc.
+    ?n a tor:Neighborhood;
+    	loc_old:hasLocation ?nloc.
+    ?ploc geo:sfWithin ?nloc.
+    ?x cacensus:hasLocation ?characteristic_area.
+    ?characteristic_area tor:inNeighbourhood ?n.
+    
+    ?x i72:hasValue ?valnode.
+    ?valnode i72:hasNumericalValue ?population;
+    				i72:hasUnit ?unit.
+}} WHERE {{
+#stage 1 find tor:Neighborhood for parcel
+    {{
+        SELECT ?n ?neighbourhood_name ?ploc ?nloc WHERE {{  
+    #if we are looking for the neighbourhood of a specific parcel
+    <{pid}> loc:hasLocation ?ploc.
+    ?n a tor:Neighborhood;
+    	loc_old:hasLocation ?nloc;
+        rdfs:comment ?neighbourhood_name.
+    #find the neighbourhood the parcel is located in
+    ?ploc geo:sfWithin ?nloc.
+        }}
+    }}
+    #stage 2: union of all required census characteristics:
+    {{
+    {{#population density
+    #characteristic values for census tracts within a neighbourhood
+    ?x a cacensus:PopulationDensity2016;
+    cacensus:hasLocation ?characteristic_area;
+		i72:hasValue [i72:hasNumericalValue ?population;
+    				i72:hasUnit ?unit];
+            rdfs:comment ?xlabel.
+    ?characteristic_area tor:inNeighbourhood ?n;
+            loc_old:hasLocation [geo:asWKT ?cwkt].
+    #unit label
+    ?unit rdfs:label ?unit_label.
+    }}
+	UNION
+    {{#avg income
+    #characteristic values for census tracts within a neighbourhood
+    ?x a <http://ontology.eil.utoronto.ca/tove/cacensus#AverageAfterTaxIncome25Sample2016>;
+    cacensus:hasLocation ?characteristic_area;
+		i72:hasValue [i72:hasNumericalValue ?population;
+    				i72:hasUnit ?unit];
+            rdfs:comment ?xlabel.
+    ?characteristic_area tor:inNeighbourhood ?n.
+    OPTIONAL {{#unit label
+    ?unit rdfs:label ?unit_label.
+            }}
+    }}
+        	UNION
+    {{#total private dwellings
+    #characteristic values for census tracts within a neighbourhood
+    ?x a <http://ontology.eil.utoronto.ca/tove/cacensus#TotalPrivateDwellings2016>;
+    cacensus:hasLocation ?characteristic_area;
+		i72:hasValue [i72:hasNumericalValue ?population;
+    				i72:hasUnit ?unit];
+            rdfs:comment ?xlabel.
+    ?characteristic_area tor:inNeighbourhood ?n.
+    OPTIONAL {{#unit label
+    ?unit rdfs:label ?unit_label.
+            }}
+    }}
+}}
+}}"""
+    return query
