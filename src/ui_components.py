@@ -23,6 +23,7 @@ import plotly.express as px
 from PIL import ImageColor
 from src.sparql_client import *
 from src.utils import *
+
 def add_wkt_to_fig(fig, wkt_value, name, color='blue', opacity=0.3, show_in_legend=True, group_id=None, secondary_label=None, secondary_value=None):
     """Parses WKT and adds a corresponding trace to a Plotly figure.
 
@@ -213,11 +214,13 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
     if not parcel_uri:
         headers=[""]
         data = [["No parcel found. Please search for an address first."]]
+        data.columns=headers
         results_table = gr.update(value=data, visible=True)
         return results_table, html_cityavg, current_fig, col1, col2, secondary_drp
     if selected_option == "Select...":
         headers=[""]
         data = [["Please select a query from the list."]]
+        data.columns=headers
         results_table = gr.update(value=data, visible=True)
 
     try:

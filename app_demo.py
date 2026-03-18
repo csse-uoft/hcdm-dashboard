@@ -177,7 +177,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue="red")) as demo:
     #with gr.Accordion("Click for Visual Graph", open=False):
     #    graph_output = gr.HTML(visible=False,label="Visual Graph")
 #event logic        
-    search_btn.click(fn=process_address, inputs=[endpoint_state,addr_input], outputs=[selected_parcel_uri, res_status, query_display, map_plot, base_map_state])
+    search_btn.click(fn=process_address, inputs=[endpoint_state,addr_input], outputs=[selected_parcel_uri, res_status, query_display, map_plot, base_map_state,query_dropdown])
     # Dropdown change triggers the specific query logic
     query_dropdown.change(
         fn=query_router,

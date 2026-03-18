@@ -180,4 +180,4 @@ SELECT ?p ?wkt WHERE {{
         x=0.5              # Center it horizontally
     )
     )
-    return parcel_uri, f"Geocoded: {full_address}", query_text, fig, fig
+    return parcel_uri, f"Geocoded: {full_address}", query_text, fig, fig, "Select..."
