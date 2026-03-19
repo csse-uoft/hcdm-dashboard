@@ -199,7 +199,7 @@ def fetch_service_data(endpoint,prefixes, pid, servicetype):
     detail_query = f"""
             {prefixes}
 
-SELECT ?servicelabel ?servicename ?cap_type ?cap_avail ?cap_unit ?swkt WHERE {{
+SELECT DISTINCT ?servicelabel ?servicename ?cap_type ?cap_avail ?cap_unit ?swkt WHERE {{
 {{
 #services with suitable catchment areas
     <{pid}> hp:servicedBy ?s;

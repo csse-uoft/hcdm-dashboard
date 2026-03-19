@@ -212,16 +212,12 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
     ]
 
     if not parcel_uri:
-        headers=[""]
         data = [["No parcel found. Please search for an address first."]]
-        data.columns=headers
-        results_table = gr.update(value=data, visible=True)
+        results_table = gr.update(value=data, headers=[""], visible=True)
         return results_table, html_cityavg, current_fig, col1, col2, secondary_drp
     if selected_option == "Select...":
-        headers=[""]
         data = [["Please select a query from the list."]]
-        data.columns=headers
-        results_table = gr.update(value=data, visible=True)
+        results_table = gr.update(value=data, headers=[""], visible=True)
 
     try:
         # create a copy of the map to add to it
@@ -251,7 +247,7 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
         data.columns = headers
         results_table = gr.Dataframe(value=data, visible=True)
         #contextual data
-        html_output = format_context_cards(fetch_demographics_avg(endpoint,prefixes))
+        html_output = format_context_cards(fetch_demographics_avg(endpoint,prefixes), section_title="Average Neighbourhood Demographics")
         html_cityavg = gr.HTML(value=html_output, label="Toronto Averages", visible=True)
         #update the map
         #  Build the color map using the indices of your unique labels
@@ -291,7 +287,7 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
         displaydata = data.style.format(precision=4)
         results_table = gr.Dataframe(value=displaydata, visible=True)
          #contextual data
-        html_output = format_context_cards(avg_data)
+        html_output = format_context_cards(avg_data, section_title="Average Service Capacities")
         html_cityavg = gr.HTML(value=html_output, label="Toronto Averages", visible=True)            
         # For service points on the map
         # Count occurrences of each service type
@@ -345,7 +341,7 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
         displaydata = data.style.format(precision=2)
         results_table = gr.Dataframe(value=displaydata, visible=True, label="Note: zones adjacent to the parcel (if any) are returned for context.")
         #contextual data
-        html_output = format_context_cards(fetch_zoning_avg(endpoint,prefixes))
+        html_output = format_context_cards(fetch_zoning_avg(endpoint,prefixes), section_title="Constraint Averages")
         html_cityavg = gr.HTML(value=html_output, label="Toronto Averages", visible=True)
 
         #update map
@@ -531,15 +527,23 @@ def generate_graph_iframe(query, host="compass.project.urbandatacentre.ca"):
     # 3. Return the HTML iframe component
     return f'<iframe src="{embedded_url}" width="100%" height="600px" style="border:none;"></iframe>'
 
-def format_context_cards(df):
+def format_context_cards(df, section_title="Averages"):
     """Formats a pandas dataframe (via sparql query results) into html content suitable for presentation in the city averages view.
     Todo: documentation
     assumes data with the attributes: avg_label, avg, u_label"""
     if df is None or df.empty:
         return "<p style='color: gray;'>No contextual data available for this area.</p>"
     
-    # Start the container with Flexbox for wrapping
-    html_content = '<div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">'
+# 1. Start with the Section Title
+    # Using a <h3> for hierarchy with a slight bottom border for visual separation
+    html_content = f"""
+    <h3 style="margin-bottom: 15px; font-family: sans-serif; color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+        {section_title}
+    </h3>
+    """
+    
+    # 2. Start the Flexbox container
+    html_content += '<div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">'
     
     for _, row in df.iterrows():
         # Adjust these keys based on your specific DataFrame column names
