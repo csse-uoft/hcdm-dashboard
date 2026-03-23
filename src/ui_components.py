@@ -45,84 +45,74 @@ def add_wkt_to_fig(fig, wkt_value, name, color='blue', opacity=0.3, show_in_lege
 
     try:
         if isinstance(wkt_value, (list, np.ndarray)):
-        # If it's an array of a single string, extract it
             wkt_str = str(wkt_value.item()) if hasattr(wkt_value, 'item') else str(wkt_value[0])
         else:
             wkt_str = str(wkt_value)
+            
         clean_wkt = wkt_str.split('>')[-1].strip()
-        lats = []
-        lons = []
         geom = wkt.loads(clean_wkt)
-
-        # Use the label name as the group ID if no specific group_id is provided
         gid = group_id if group_id else name
 
-        legend_args = dict(
+        # common_args: Contains only the shared visual/ID properties
+        common_args = dict(
             name=name,
-            legendgroup=gid,      # All items in this group toggle together
-            showlegend=show_in_legend,
+            legendgroup=gid,
             marker=dict(size=12, color=color)
         )
 
-        # Handle Point
-        if geom.geom_type == 'Point':
-            # Wrap in one extra list so it's [[label, value]]
-            custom_data_wrapped = [[secondary_label, secondary_value]]
-            fig.add_trace(go.Scattermap(
-                lat=[geom.y], lon=[geom.x],
-                mode='markers',
-                **legend_args, # Unpack common legend settings
-                customdata=custom_data_wrapped,
-                hovertemplate=f"<b>%{{customdata[0]}}</b>: %{{customdata[1]}}<extra></extra>"
-            ))
-        # Handle Multipoint
-        if geom.geom_type == 'MultiPoint':
-            lats = [p.y for p in geom.geoms]
-            lons = [p.x for p in geom.geoms]
-            # Wrap in one extra list so it's [[label, value]] for EVERY point in the set
-            custom_data_wrapped = [[secondary_label, secondary_value]] * len(lons)
+        # 1. Handle Points
+        if geom.geom_type in ['Point', 'MultiPoint']:
+            if geom.geom_type == 'Point':
+                lats, lons = [geom.y], [geom.x]
+            else:
+                lats = [p.y for p in geom.geoms]
+                lons = [p.x for p in geom.geoms]
+            
             fig.add_trace(go.Scattermap(
                 lat=lats, lon=lons,
                 mode='markers',
-                **legend_args, # Unpack common legend settings
-                customdata=custom_data_wrapped,
+                showlegend=show_in_legend, 
+                **common_args, 
+                customdata=[[secondary_label, secondary_value]] * len(lons),
                 hovertemplate=f"<b>%{{customdata[0]}}</b>: %{{customdata[1]}}<extra></extra>"
             ))
-        #for lines
-        elif geom.geom_type in ['MultiLineString', 'LineString']:
-            # Standardize to a list of geometry objects
+
+        # 2. Handle Lines
+        elif geom.geom_type in ['LineString', 'MultiLineString']:
             geoms = geom.geoms if geom.geom_type == 'MultiLineString' else [geom]
-            
-            for g in geoms:
+            for i, g in enumerate(geoms):
                 lons, lats = g.xy
-                custom_data_wrapped = [[secondary_label, secondary_value]] * len(lons)
+                actual_show = show_in_legend if i == 0 else False
+                
                 fig.add_trace(go.Scattermap(
                     mode="lines",
-                    lon=list(lons),
-                    lat=list(lats),
+                    lon=list(lons), lat=list(lats),
                     line=dict(width=2, color=color),
-                    **legend_args,
-                    customdata=custom_data_wrapped,
+                    showlegend=actual_show,
+                    **common_args, 
+                    customdata=[[secondary_label, secondary_value]] * len(lons),
                     hovertemplate=f"<b>%{{customdata[0]}}</b>: %{{customdata[1]}}<extra></extra>"
                 ))
-        # Handle Polygons
+
+        # 3. Handle Polygons
         elif geom.geom_type in ['Polygon', 'MultiPolygon']:
             geoms = geom.geoms if geom.geom_type == 'MultiPolygon' else [geom]
-            for g in geoms:
+            for i, g in enumerate(geoms):
                 lons, lats = g.exterior.xy
-                # Create a list of [label, value] for EVERY vertex in the polygon
-                custom_data_wrapped = [[secondary_label, secondary_value]] * len(lons)        
+                actual_show = show_in_legend if i == 0 else False
+                
                 fig.add_trace(go.Scattermap(
                     mode="lines", 
                     fill="toself",
-                    lon=list(lons), 
-                    lat=list(lats),
-                    fillcolor=hex_to_rgba(color,opacity),
+                    lon=list(lons), lat=list(lats),
+                    fillcolor=hex_to_rgba(color, opacity),
                     line=dict(width=2, color=color),
-                    **legend_args, # Unpack common legend settings
-                    customdata=custom_data_wrapped,
+                    showlegend=actual_show,
+                    **common_args, 
+                    customdata=[[secondary_label, secondary_value]] * len(lons),
                     hovertemplate=f"<b>%{{customdata[0]}}</b>: %{{customdata[1]}}<extra></extra>"
                 ))
+
     except Exception as e:
         print(f"Error parsing WKT for {name}: {e}")
 
