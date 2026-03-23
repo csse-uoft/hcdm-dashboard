@@ -95,15 +95,34 @@ def process_address(endpoint,address):
             - query_text (str): The SPARQL query string used for the lookup.
             - map_fig (go.Figure): The interactive Plotly map figure.
             - map_fig_alt (go.Figure): A duplicate of the map figure for UI sync (to maintain a base map state).
+            - "Select..." The default dropdown setting
+    Todo:
+        update go.Figure
     """
-    """Returns a parcel ID, referenced address, SPARQL lookup query, and map given user address input"""
-    if not address:
-        return None, "Please enter an address.", "", go.Figure(),go.Figure(),"Select..."
+    #default map
+    default_fig = go.Figure()
+    default_fig.add_trace(go.Scattermap(
+        lat=[None], lon=[None], mode='markers', showlegend=False
+    ))
+    default_fig.update_layout(
+        map_style="streets",
+        # Use strings for keys to avoid UnboundLocalError with your variables
+        map={
+            "center": {"lat": 43.6532, "lon": -79.3832}, 
+            "zoom": 10
+        },
+        margin={"r":0,"t":0,"l":0,"b":0},
+        legend=dict(orientation="h", yanchor="bottom", y=-0.1, xanchor="center", x=0.5)
+    )
 
+    if not address:
+        return None, "Please enter an address.", "", default_fig,default_fig,"Select..."
+
+    #process address
     lat, lon, full_address = geocode_logic(address)
 
     if lat is None:
-        return None, "Address not found in Toronto.", "", go.Figure(),go.Figure(),"Select..."
+        return None, "Address not found in Toronto.", "", default_fig,default_fig,"Select..."
 
     # 1. Generate WKT and Query
     wkt_point = Point(lon, lat).wkt
