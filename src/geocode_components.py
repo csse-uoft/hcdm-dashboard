@@ -103,7 +103,7 @@ def process_address(endpoint,address):
     lat, lon, full_address = geocode_logic(address)
 
     if lat is None:
-        return None, "Address not found in Toronto.", "", go.Figure()
+        return None, "Address not found in Toronto.", "", go.Figure(),go.Figure(),"Select..."
 
     # 1. Generate WKT and Query
     wkt_point = Point(lon, lat).wkt
