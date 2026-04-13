@@ -191,6 +191,8 @@ def process_df_col_to_markdown_chips(df, column_name):
 
     Returns:
         str: A Markdown string containing HTML-styled tags.
+    
+    Todo: consider generating html instead
     """
     # 1. Handle Empty or 'Unknown' states gracefully
     if df.empty or (len(df) == 1 and str(df.iloc[0, 0]).lower() == "unknown"):

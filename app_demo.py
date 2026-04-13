@@ -126,7 +126,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue="red")) as demo:
     gr.Markdown(
         """
         <div class="info-bar">
-            <strong>Beta Version:</strong> This tool queries a live, shared SPARQL endpoint, currently limited to sequential request processing.
+            <strong>Beta Version:</strong> This tool queries a live, shared SPARQL endpoint, currently limited to sequential request processing. To
             prevent system-wide delays, queries are processed one at a time and will automatically timeout after 60 seconds.
         """
     )
@@ -156,27 +156,31 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue="red")) as demo:
         label="Choose a query to run on this parcel",
         value="Select..."
     )
-    #zoning compliance details dropdown
-    secondary_drp = gr.Dropdown(choices=[], visible=False, label="Select Attribute to Review", interactive=True)
     # This shows the text updates from the router
     #status_update = gr.Textbox(label="Query Status", interactive=False)
-    # --- Results Table ---
-    with gr.Column(scale=3):    #parcel-specific results
-        results_table = gr.Dataframe(interactive=False, visible=False,  buttons=["copy", "fullscreen"])
-        # --- Results Listing (columns) ---
-        with gr.Row():
-            # Column 1: Markdown output
-            col1_output = gr.Markdown(visible=False)
-            # Column 2: Markdown output
-            col2_output = gr.Markdown(visible=False)
-        # --- GraphDB visual graph ---
-    with gr.Column(scale=1):    #averages for context
-        # Use small labels for the most important averages
-        city_avg = gr.HTML(visible=False,label="Toronto Averages")
+    with gr.Row():
+        # --- Results Table ---
+        with gr.Column(scale=3):   
+            #zoning compliance details dropdown
+            with gr.Row():
+                secondary_drp = gr.Dropdown(choices=[], visible=False, label="Select Attribute to Review", interactive=True)
+            #parcel-specific results
+            with gr.Row():
+                results_table = gr.Dataframe(interactive=False, visible=False,  buttons=["copy", "fullscreen"])
+            # --- Results Listing (columns) ---
+            with gr.Row():
+                # Column 1: Markdown output
+                col1_output = gr.Markdown(visible=False)
+                # Column 2: Markdown output
+                col2_output = gr.Markdown(visible=False)
+            # --- GraphDB visual graph ---
+        with gr.Column(scale=1):    #averages for context
+            # Use small labels for the most important averages
+            city_avg = gr.HTML(visible=False,label="Toronto Averages")
     # This component will render the interactive graph -- omitted for now (too slow)
     #with gr.Accordion("Click for Visual Graph", open=False):
     #    graph_output = gr.HTML(visible=False,label="Visual Graph")
-#event logic        
+    #event logic        
     search_btn.click(fn=process_address, inputs=[endpoint_state,addr_input], outputs=[selected_parcel_uri, res_status, query_display, map_plot, base_map_state,query_dropdown])
     # Dropdown change triggers the specific query logic
     query_dropdown.change(

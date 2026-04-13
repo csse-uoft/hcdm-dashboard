@@ -179,9 +179,9 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
         tuple: (results_table, updated_fig, col1_md, col2_md, secondary_drp, graph_html)
     """
     #initialize gradio components - not best practice but fixes Gradio 6.9 state bug where visibility isn't triggered on the first interaction
-    #text columns
-    col1=""
-    col2=""
+    #html columns
+    col1=gr.Markdown(visible=False)
+    col2=gr.Markdown(visible=False)
     #results summaries
     results_table=gr.Dataframe(value=None,visible=False)
     secondary_drp = gr.Dropdown(choices=[],visible=False)
@@ -203,11 +203,11 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
 
     if not parcel_uri:
         data = [["No parcel found. Please search for an address first."]]
-        results_table = gr.update(value=data, headers=[""], visible=True)
+        results_table = gr.Dataframe(value=data, headers=[""], visible=True)
         return results_table, html_cityavg, current_fig, col1, col2, secondary_drp
     if selected_option == "Select...":
         data = [["Please select a query from the list."]]
-        results_table = gr.update(value=data, headers=[""], visible=True)
+        results_table = gr.Dataframe(value=data, headers=[""], visible=True)
 
     try:
         # create a copy of the map to add to it
@@ -383,8 +383,8 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
         header2="Current Use"
         data2.columns=[header2]
         col2value = process_df_col_to_markdown_chips(data2,header2)
-        col1 = gr.HTML(value = col1value, visible=True)
-        col2 = gr.HTML(value = col2value, visible=True)
+        col1 = gr.Markdown(value = col1value, visible=True)
+        col2 = gr.Markdown(value = col2value, visible=True)
 
     elif selected_option == "Zoning Compliance":
         #get property labels and uris constrained by zoning
@@ -392,8 +392,14 @@ def query_router(selected_option, endpoint, prefixes, parcel_uri,current_fig,pro
         manual_option = [("Select a property...", "NONE_SELECTED")]
         choices = manual_option + choices
         secondary_drp = gr.Dropdown(choices=choices, value="NONE_SELECTED", visible=True)
-
+        # 2. Fresh Dataframe Instance placeholder 
+        results_table = gr.Dataframe(
+            value=[["Please select a property from the dropdown above to see compliance details."]], 
+            headers=["Instructions"], 
+            visible=True
+        )
     return results_table, html_cityavg, current_fig, col1, col2, secondary_drp
+
 
 def secondary_router(first_selected_option, selected_option,endpoint, prefixes, parcel_uri,current_fig,progress=gr.Progress()):
     """Handles multi-step queries (e.g., specific property compliance).

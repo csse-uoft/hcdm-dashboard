@@ -8,7 +8,7 @@
 @base <http://ontology.eil.utoronto.ca/Toronto/Toronto#> .
 
 <http://ontology.eil.utoronto.ca/Toronto/Toronto#> rdf:type owl:Ontology ;
-                                                    owl:imports <http://ontology.eil.utoronto.ca/HPCDM/> ;
+                                                    owl:imports <http://ontology.eil.utoronto.ca/HPCDM.owl> ;
                                                     <http://purl.org/dc/elements/1.1/title> "Toronto Housing Potential Common Data Model" ;
                                                     <http://purl.org/dc/terms/description> "Toronto implementation of the HPCDM. Includes some extensions and specializations as needed to support the implementation." .
 
